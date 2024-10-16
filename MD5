@@ -1,0 +1,17 @@
+9eced1a4efaa23545176c4794b3f1d97 *DESCRIPTION
+99065efffbbf1de5575141f6dacd9147 *NAMESPACE
+fdaf04df39e9a85717402028b57677b2 *R/coreFaithsPD.R
+e83a64ec962b76687a34ad0ccacb77ef *R/coreJaccard.R
+1eac9521a2e1bc73c8ab499c7a2fedd9 *R/corePhyloVenn.R
+cf025f91b556a8d7e3735c5dfaf6d138 *R/coreTree.R
+450aba345fb918ccb686c593e59a3d89 *R/coreUniFrac.R
+83433ec6f8a25f4c8ac381de6dc7aba9 *R/coreVennTree.R
+bd0ca0848901a9fb0ff3584ff299b6ea *R/ggvenn2.R
+43c8c8d47bcb7b5d7905c7277a06075b *R/globals.R
+f9a0bedb817e801aa95f733824ad2871 *man/coreFaithsPD.Rd
+ca22b26327450d50d2c82ada2f57db74 *man/coreJaccard.Rd
+0d4be2890567d23bebc53783ec796fac *man/corePhyloVenn.Rd
+62f6a7552a1183281a35293e9b5bfe48 *man/coreTree.Rd
+291b88f25f5158d0c6fbca361f527716 *man/coreUniFrac.Rd
+f8a105794ae4e0a35bd14b100a27f810 *man/coreVennTree.Rd
+25144b4d4d85673c665e71a0746cb58b *man/ggvenn2.Rd
