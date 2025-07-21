@@ -5,19 +5,43 @@
 #' @export
 coreVennTree <- function(x,
                          grouping,
-                         core_fraction,
+                         core_fraction = 0.5,
+                         ab_threshold1 = 0,
+                         ab_threshold2 = 0,
+                         ab_threshold3 = 0,
                          mode = 'branch',
+                         selection = 'basic',
+                         max_tax=NULL,
+                         increase_cutoff = 2,
+                         initial_branches=NULL,
                          rooted=TRUE,
                          ordered_groups=NULL,
                          branch_color=NULL,
                          remove_zeros = TRUE,
-                         plot.chronogram=FALSE) {
+                         plot.chronogram=FALSE,
+                         branch.width = 4,
+                         label.tips = FALSE,
+                         scaled = FALSE) {
 
   core<-core_fraction
 
   #remove taxa that are not present in any sample
   if (remove_zeros==TRUE){
     x<-prune_taxa(taxa_names(x)[which(rowSums(sign(otu_table(x)))>0)],x)
+  }
+
+  #Using an unrooted tree in branch mode with abundance thresholds is not currently supported.  If an unrooted tree is provided with non-zero abundance thresholds and branch mode is requested, reroot it
+  if (rooted == FALSE){
+    if (ab_threshold1+ab_threshold2+ab_threshold3>0){
+      randoroot = sample(phy_tree(x)$tip.label, 1)
+      warning("Use of an unrooted tree with non-zero abundance thresholds in branch mode is not supported.")
+      warning("Randomly assigning root as -- ", randoroot, " -- in the phylogenetic tree provided.")
+      phy_tree(x) <- root(phy=phy_tree(x), outgroup=randoroot, resolve.root=TRUE, interactive=FALSE)
+      if( !is.rooted(phy_tree(x)) ){
+        stop("Problem automatically rooting tree. Make sure your tree is rooted before attempting UniFrac calculation. See ?ape::root")
+      }
+      rooted = TRUE
+    }
   }
 
   #find the number of different habitat types (e.g. hosts or environments) that are being compared
@@ -55,78 +79,26 @@ coreVennTree <- function(x,
         #put them into the list of samples in each habitat
         grouplist<-append(grouplist,temp)
 
-        #initialize a vector of edges present in the samples from the focal habitat
-        edgestemp<-c()
+        xt<-prune_samples(sample_names(x)[which(grouping==group_id[i])],x)
 
-        #for each sample from the focal habitat...
-        for (j in 1:length(temp[[1]])){
+        if (selection == 'basic'){
 
-          #find the location of the sample in the otu table
-          hit<-which(sample_names(x)==temp[[1]][j])
+          #Call function to calculate all edges and core edges
+          temp2<-basic_branch(xt,newtree,core,ab_threshold1,ab_threshold2,ab_threshold3,rooted)
 
-          #if you are including the root...
-          if (rooted==TRUE){
-            #if core taxa must be present in at least one sample...
-            if (core>0){
-              #find the taxa with at least one read in the sample;include the outgroup so that you draw branches back to the root
-              nz<-c('outgroup',taxa_names(x)[which(otu_table(x)[,hit]>0)])
-              #if core taxa must not be present in at least one sample (i.e., include the entire microbiome)...
-            }else{
-              #find all the taxa listed, even if they have no reads; include the outgroup so that you draw branches back to the root
-              nz<-c('outgroup',taxa_names(x)[which(otu_table(x)[,hit]>=0)])
-            }
-            #if you are not including the root...
-          }else{
-            #if core taxa must be present in at least one sample...
-            if (core>0){
-              #find the taxa with at least one read in the sample; do not include the outgroup because you are drawing a minimal spanning tree
-              nz<-taxa_names(x)[which(otu_table(x)[,hit]>0)]
-              #if core taxa must not be present in at least one sample...
-            }else{
-              #find all the taxa listed, even if they have no reads; do not include the outgroup because you are drawing a minimal spanning tree
-              nz<-taxa_names(x)[which(otu_table(x)[,hit]>=0)]
-            }
-          }
+        }else if (selection == 'shade'){
 
-          #find the edges associated with taxa in that sample...
-          edgestemp<-c(edgestemp,which.edge(newtree,nz))
+          #If no maximum taxon is specified, default to considering 1%
+          if (is.null(max_tax)){max_tax<-1}
+          temp2<-shade_branch(xt,newtree,max_tax,increase_cutoff,initial_branches)
+
+        }else{
+
+          warning('That method of core selection is not available. Please use basic or shade.')
+
         }
 
-        #find counts of the number of times each edge appeared across all the samples from the focal habitat
-        branch_counts<-table(edgestemp)
-        #pull out the edges that were present in at least a core threshold number of samples from the focal habitat
-        core_branch<-which(branch_counts>=core*length(temp[[1]]))
-        #make a list of the core edges from the focal habitat
-        core_edges<-as.integer(names(core_branch))
-
-        #if the root is not included
-        if (rooted==FALSE){
-
-          #find the nodes associated with core edges
-          nodes<-unique(c(newtree$edge[,1][core_edges],newtree$edge[,2][core_edges]))
-          #find the mrca of each node in the tree
-          cc<-mrca(newtree,full=TRUE)
-          #find the mrca of each node associated with a core edge
-          mrca_matrix<-cc[nodes,nodes]
-          #find the unique mrcas for the core edge nodes
-          mrca_list<-unique(as.vector(mrca_matrix))
-          #find the unique mrcas plus core edge nodes
-          mrca_list<-unique(mrca_list,nodes)
-          #identify mrcas missing from the list of nodes associated with core edges
-          missing<-mrca_list[which(!(mrca_list %in% nodes))]
-          if (length(missing)>0){
-            for (i in 1:length(missing)){
-              for (j in 1:length(nodes)){
-                #find the nodes connecting the missing mrcas to the nodes associated with core edges
-                mrca_list<-c(mrca_list,nodepath(newtree,from=missing[i],to=nodes[j]))
-              }
-            }
-          }
-          #find the edges associated with all the nodes (core and mrcas)
-          all_core_edges<-intersect(which(newtree$edge[,1] %in% mrca_list),which(newtree$edge[,2] %in% mrca_list))
-          #add the missing edges to the core edges
-          core_edges<-unique(c(core_edges,all_core_edges))
-        }
+        core_edges<-temp2$core_edges
 
         #append the edges from the focal habitat to the list of lists where the main list is of the habitats and the sublists are of the core edges for each habitat
         edgelist<-append(edgelist,list(core_edges))
@@ -152,16 +124,32 @@ coreVennTree <- function(x,
         #put them into the list of samples in the habitat list
         grouplist<-append(grouplist,temp)
 
-        #find the names of the taxa that are core in the focal habitat
-        coretaxatemp<-taxa_names(x)[which(rowSums(sign(otu_table(x)[,which(grouping==group_id[i])]))>=core*length(which(grouping==group_id[i])))]
+        xt<-prune_samples(sample_names(x)[which(grouping==group_id[i])],x)
+
+        if (selection == 'basic'){
+
+          #Call function to calculate all edges and core edges
+          temp2<-basic_tip(xt,newtree,core,ab_threshold1,ab_threshold2,ab_threshold3,rooted)
+
+        }else if (selection == 'shade'){
+
+          #If no maximum taxon is specified, default to considering 1%
+          if (is.null(max_tax)){max_tax<-round(length(newtree$tip.label)*0.01)}
+          temp2<-shade_tip(xt,newtree,max_tax,increase_cutoff)
+
+        }else{
+
+          warning('That method of core selection is not available. Please use basic or shade.')
+
+        }
+
         #put them into the list of taxa in the habitat list
-        corelist<-append(corelist,list(coretaxatemp))
+        corelist<-append(corelist,list(temp2$core_taxa))
         #put them into the vector of core taxa from any/all habitats
-        allcorelist<-unique(c(coretaxatemp,allcorelist))
+        allcorelist<-unique(c(temp2$core_taxa,allcorelist))
       }
 
       #find the edges associated with core taxa from any/all habitats (this is the minimal spanning tree)
-      spanlist<-which.edge(newtree,allcorelist)
       habitatspanlist<-c()
       for (i in 1:group_count){
         habitatspanlist<-c(habitatspanlist,list(which.edge(newtree,corelist[[i]])))
@@ -181,7 +169,6 @@ coreVennTree <- function(x,
         #for each habitat...
         for (i in 1:group_count){
           #remove all edges that are not part of the minimal spanning tree for core microbes from each habitats
-          #edgelist[[i]]<-edgelist[[i]][which(edgelist[[i]] %in% spanlist)]
           edgelist[[i]]<-edgelist[[i]][which(edgelist[[i]] %in% habitatspanlist[[i]])]
         }
       }
@@ -247,6 +234,7 @@ coreVennTree <- function(x,
     }
 
 
+
     #if no branch color scheme is stated, default to a continuous blue-to-red scheme
     if (is.null(branch_color)){
       #plot the tree
@@ -273,10 +261,18 @@ coreVennTree <- function(x,
         }
         if (plot.chronogram==FALSE){
           #plot the tree
-          tt<-plot.phylo(phy_tree(x),edge.color=branch_color[states],edge.width = 4,show.tip.label=FALSE)
+          if (scaled == FALSE){
+          tt<-plot.phylo(phy_tree(x),edge.color=branch_color[states],edge.width = branch.width,show.tip.label=label.tips)
+          }else{
+            temptree<-phy_tree(x)
+            temptree$edge.length <- sqrt(temptree$edge.length+1e-2)
+            tt<-plot.phylo(temptree,edge.color=branch_color[states],edge.width = branch.width,show.tip.label=label.tips)
+          }
         }else{
-          tt<-plot.phylo(chronos(phy_tree(x)),edge.color=branch_color[states],edge.width = 4,show.tip.label=FALSE)
+          tt<-plot.phylo(chronos(phy_tree(x)),edge.color=branch_color[states],edge.width = branch.width,show.tip.label=label.tips)
         }
+
+        return(cvals)
 
       }
     }

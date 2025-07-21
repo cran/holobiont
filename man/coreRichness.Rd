@@ -1,16 +1,14 @@
-\name{coreFaithsPD}
-\alias{coreFaithsPD}
+\name{coreRichness}
+\alias{coreRichness}
 \title{
-Faiths PD of the Core Microbiome
+Richness of the Core Microbiome
 }
 \description{
-Calculates Faith's phylogenetic diversity (PD) of a core microbiome based on either the tip-based or the branch-based core community phylogeny.
+Calculates richness of a core microbiome using a non-phylogenetic approach.
 }
 \usage{
-coreFaithsPD(x, core_fraction = 0.5, ab_threshold1 = 0,
-ab_threshold2 = 0, ab_threshold3 = 0, mode='branch',
-selection='basic', max_tax = NULL, increase_cutoff = 2,
-initial_branches = NULL, rooted=TRUE)
+coreRichness(x, core_fraction = 0.5, ab_threshold1 = 0, ab_threshold2 = 0,
+ab_threshold3 = 0, selection='basic', max_tax = NULL, increase_cutoff = 2)
 }
 \arguments{
 \item{x}{
@@ -28,9 +26,6 @@ The threshold for maximum relative abundance in any sample. This variable is onl
 \item{ab_threshold3}{
 The threshold for minimum relative abundance across all samples. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.
 }
-\item{mode}{
-Whether to build a tip-based ('tip') or a branch-based ('branch') phylogeny. The default is 'branch'.
-}
 \item{selection}{
 Whether to use thresholds ('basic') or the Shade and Stopnisek method ('shade') to define the core community. The default is 'basic'.
 }
@@ -40,19 +35,14 @@ The maximum number of branches to add sequentially, as a percentage of the total
 \item{increase_cutoff}{
 The threshold for the percent increase in beta diversity used to identify the taxon at which point adding more taxa yields diminishing returns in explanatory power. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
 }
-\item{initial_branches}{
-The number of branches to include prior to testing for increases in beta diversity. The default is to use all branches that are present in every sample and to begin testing branches that are missing from at least one sample. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
-}
-\item{rooted}{
-Whether to include the root of the phylogeny. The default is TRUE, meaning that the root is necessarily included in all phylogenies. This requires that the input tree be rooted.
-}
+
 
 }
 \details{
-\code{coreFaithsPD} calculates Faith's PD (Faith, 1992) based on either the tip-based or the branch-based core community phylogeny using either basic thresholds or a modification of the Shade and Stopnisek (2019) algorithm. In both cases, Faith's PD is calculated as the sum of the branch lengths in the core community phylogeny. For more details, see Bewick and Camper (2025).
+\code{coreRichness} calculates richness (a count of microbial taxa) using either basic thresholds or a modification of the Shade and Stopnisek (2019) algorithm.
 }
 \value{
-This function returns the numeric value of Faith's PD for the core microbiome.
+This function returns the numeric value of richness for the core microbiome.
 }
 
 \references{
@@ -71,11 +61,10 @@ set.seed(1)
 #Generate an example tree and label it with the names of the microbial taxa
 enterotype_tree<-rtree(length(taxa_names(enterotype)))
 enterotype_tree$tip.label<-taxa_names(enterotype)
-enterotype_tree$node.label<-as.character(1:1:enterotype_tree$Nnode)
 
 #Create a phyloseq object with a tree
 example_phyloseq<-phyloseq(otu_table(enterotype),phy_tree(as.phylo(enterotype_tree)))
 
-coreFaithsPD(example_phyloseq)
+coreRichness(example_phyloseq)
 
 }

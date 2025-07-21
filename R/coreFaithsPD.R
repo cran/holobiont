@@ -2,9 +2,36 @@
 #' @importFrom phyloseq sample_names otu_table phy_tree taxa_names
 #' @importFrom ape which.edge mrca nodepath
 #' @export
-coreFaithsPD <- function(x, core_fraction, mode = 'branch',rooted=TRUE) {
+coreFaithsPD <- function(x,
+                         core_fraction = 0.5,
+                         ab_threshold1 = 0,
+                         ab_threshold2 = 0,
+                         ab_threshold3 = 0,
+                         mode = 'branch',
+                         selection = 'basic',
+                         max_tax=NULL,
+                         increase_cutoff = 2,
+                         initial_branches=NULL,
+                         rooted=TRUE) {
 
   core<-core_fraction
+
+  #Using an unrooted tree in branch mode with abundance thresholds is not currently supported.  If an unrooted tree is provided with non-zero abundance thresholds and branch mode is requested, reroot it
+  length_correct<-0.0001
+  if (rooted == FALSE){
+    length_correct<-0
+    if (ab_threshold1+ab_threshold2+ab_threshold3>0){
+      randoroot = sample(phy_tree(x)$tip.label, 1)
+      warning("Use of an unrooted tree with non-zero abundance thresholds in branch mode is not supported.")
+      warning("Randomly assigning root as -- ", randoroot, " -- in the phylogenetic tree provided.")
+      phy_tree(x) <- root(phy=phy_tree(x), outgroup=randoroot, resolve.root=TRUE, interactive=FALSE)
+      if( !is.rooted(phy_tree(x)) ){
+        stop("Problem automatically rooting tree. Make sure your tree is rooted before attempting UniFrac calculation. See ?ape::root")
+      }
+      rooted = TRUE
+      length_correct<-0.0001
+    }
+  }
 
   #add an outgroup so that there is the option of drawing all edges to the root rather than the minimal spanning tree
   newtree<-bind.tip(phy_tree(x),tip.label='outgroup',edge.length=0.0001,position=0)
@@ -12,78 +39,30 @@ coreFaithsPD <- function(x, core_fraction, mode = 'branch',rooted=TRUE) {
   #if you are building a branch-based tree...
   if (mode=='branch'){
 
-    #initialize a list of all the edges associated with taxa present in the system
-    edges<-c()
+    #If using the basic selection mode...
+    if (selection == 'basic'){
 
-    #for each sample...
-    for (i in 1:length(sample_names(x))){
+      #Call function to calculate all edges and core edges
+      temp2<-basic_branch(x,newtree,core,ab_threshold1,ab_threshold2,ab_threshold3,rooted)
 
-      #if you are including the root...
-      if (rooted==TRUE){
+      #If using the shade selection mode...
+    }else if (selection == 'shade'){
 
-        #find the taxa present in the sample; include the outgroup so that you find a tree spanning the root; account for core = 0 by including taxa not present in any samples
-        if (core>0){
-          nz<-c('outgroup',taxa_names(x)[which(otu_table(x)[,i]>0)])
-        }else{
-          nz<-c('outgroup',taxa_names(x)[which(otu_table(x)[,i]>=0)])
-        }
-        #if you include the outgroup, put in a correction for its length
-        length_correct<-0.0001
+      #If no maximum taxon is specified, default to considering 1%
+      if (is.null(max_tax)){max_tax<-1}
 
-      #if you are not including the root
-      }else{
+      #Call the function to calculate all edges and core edges
+      temp2<-shade_branch(x,newtree,max_tax,increase_cutoff,initial_branches)
 
-        #find the taxa present in the sample; do NOT include the outgroup because you are not including the root; account for core = 0 by including taxa not present in any samples
-        if (core>0){
-          nz<-taxa_names(x)[which(otu_table(x)[,i]>0)]
-        }else{
-          nz<-taxa_names(x)[which(otu_table(x)[,i]>=0)]
-        }
-        #if you did not include the outgroup, there is no correction for its length
-        length_correct<-0
-      }
+      #If a non-supported mode is selected print a warning and stop
+    }else{
 
-      #find the edges associated with those taxa
-      edges<-c(edges,which.edge(newtree,nz))
+      stop('That method of core selection is not available. Please use basic or shade.')
+
     }
 
-    #find counts of the number of times each edge appeared across all samples
-    branch_counts<-table(edges)
-
-    #pull out the core edges that were present in at least a core number of samples
-    core_branch<-which(branch_counts>=core*length(sample_names(x)))
-
-    #make a list of the core edges for inornatus
-    core_edges<-as.integer(names(core_branch))
-
-    #if the root is not included
-    if (rooted==FALSE){
-
-      #find the nodes associated with core edges
-      nodes<-unique(c(newtree$edge[,1][core_edges],newtree$edge[,2][core_edges]))
-      #find the mrca of each node in the tree
-      cc<-mrca(newtree,full=TRUE)
-      #find the mrca of each node associated with a core edge
-      mrca_matrix<-cc[nodes,nodes]
-      #find the unique mrcas for the core edge nodes
-      mrca_list<-unique(as.vector(mrca_matrix))
-      #find the unique mrcas plus core edge nodes
-      mrca_list<-unique(mrca_list,nodes)
-      #identify mrcas missing from the list of nodes associated with core edges
-      missing<-mrca_list[which(!(mrca_list %in% nodes))]
-      if (length(missing)>0){
-      for (i in 1:length(missing)){
-        for (j in 1:length(nodes)){
-          #find the nodes connecting the missing mrcas to the nodes associated with core edges
-          mrca_list<-c(mrca_list,nodepath(newtree,from=missing[i],to=nodes[j]))
-        }
-      }
-      }
-      #find the edges associated with all the nodes (core and mrcas)
-      all_core_edges<-intersect(which(newtree$edge[,1] %in% mrca_list),which(newtree$edge[,2] %in% mrca_list))
-      #add the missing edges to the core edges
-      core_edges<-unique(c(core_edges,all_core_edges))
-    }
+    #make a list of the core edges from the focal habitat
+    core_edges<-temp2$core_edges
 
 
     #sum up the lengths of those edges, possibly making a corection for the outgroup length
@@ -92,34 +71,38 @@ coreFaithsPD <- function(x, core_fraction, mode = 'branch',rooted=TRUE) {
   #if you are building a tip-based tree...
   }else if (mode=='tip'){
 
-    #if you are including the root...
-    if (rooted==TRUE){
+    #If using the basic selection mode...
+    if (selection == 'basic'){
 
-      #make a list of all the taxa present in a threshold number of samples; include the outgroup so that you draw lines back to the root
-      coretaxa<-c('outgroup',taxa_names(x)[which(rowSums(sign(otu_table(x)))>=core*length(sample_names(x)))])
+      #Call function to calculate all edges and core edges
+      temp2<-basic_tip(x,newtree,core,ab_threshold1,ab_threshold2,ab_threshold3,rooted)
 
-      #find the edges associated with those taxa
-      core_edges<-which.edge(newtree,coretaxa)
+      #If using the shade selection mode...
+    }else if (selection == 'shade'){
 
-      #sum up the lengths of those edges, correcting for the edge of the added outgroup
-      core_length<-sum(newtree$edge.length[core_edges])-0.0001
+      #If no maximum taxon is specified, default to considering 1%
+      if (is.null(max_tax)){max_tax<-1}
 
-    #if you are not including the root...
+      #Call the function to calculate all edges and core edges
+      temp2<-shade_tip(x,newtree,max_tax,increase_cutoff)
+
+      #If a non-supported mode is selected print a warning and stop
     }else{
 
-      #make a list of all the taxa present in a threshold number of samples; do NOT include the outgroup so that you do not draw lines back to the root
-      coretaxa<-taxa_names(x)[which(rowSums(sign(otu_table(x)))>=core*length(sample_names(x)))]
+      stop('That method of core selection is not available. Please use basic or shade.')
 
-      #find the edges associated with those taxa
-      core_edges<-which.edge(phy_tree(x),coretaxa)
+    }
 
-      #sum up the lengths of those edges, there is no correction necessary
-      core_length<-sum(phy_tree(x)$edge.length[core_edges])
+    #make a list of the core edges from the focal habitat
+    core_edges<-temp2$core_edges
+
+    #sum up the lengths of those edges, possibly making a corection for the outgroup length
+    core_length<-sum(newtree$edge.length[core_edges])-length_correct
 
     }
 
   #if a mode was entered that is not supported, print a warning
-  }else{warning('Warning: that mode is not supported')}
+  else{warning('Warning: that mode is not supported')}
 
   #return the summed length of the edges
   return(core_length)

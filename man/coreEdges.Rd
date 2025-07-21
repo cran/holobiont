@@ -1,16 +1,16 @@
-\name{coreFaithsPD}
-\alias{coreFaithsPD}
+\name{coreEdges}
+\alias{coreEdges}
 \title{
-Faiths PD of the Core Microbiome
+Edges of the Tree Included in the Core Community Phylogeny
 }
 \description{
-Calculates Faith's phylogenetic diversity (PD) of a core microbiome based on either the tip-based or the branch-based core community phylogeny.
+Finds the edges of a phylogenetic tree that are part of the core microbiome based on either the tip-based or the branch-based core community phylogeny.
 }
 \usage{
-coreFaithsPD(x, core_fraction = 0.5, ab_threshold1 = 0,
+coreEdges(x, core_fraction = 0.5, ab_threshold1 = 0,
 ab_threshold2 = 0, ab_threshold3 = 0, mode='branch',
 selection='basic', max_tax = NULL, increase_cutoff = 2,
-initial_branches = NULL, rooted=TRUE)
+initial_branches = NULL, rooted=TRUE, remove_zeros=TRUE)
 }
 \arguments{
 \item{x}{
@@ -43,16 +43,20 @@ The threshold for the percent increase in beta diversity used to identify the ta
 \item{initial_branches}{
 The number of branches to include prior to testing for increases in beta diversity. The default is to use all branches that are present in every sample and to begin testing branches that are missing from at least one sample. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
 }
+
 \item{rooted}{
 Whether to include the root of the phylogeny. The default is TRUE, meaning that the root is necessarily included in all phylogenies. This requires that the input tree be rooted.
+}
+\item{remove_zeros}{
+Whether or not to remove taxa that are no reads associated across any of the samples.
 }
 
 }
 \details{
-\code{coreFaithsPD} calculates Faith's PD (Faith, 1992) based on either the tip-based or the branch-based core community phylogeny using either basic thresholds or a modification of the Shade and Stopnisek (2019) algorithm. In both cases, Faith's PD is calculated as the sum of the branch lengths in the core community phylogeny. For more details, see Bewick and Camper (2025).
+\code{coreEdges} identifies the edges of the core community phylogeny based on either the tip-based or the branch-based core community phylogeny using either basic thresholds or a modification of the Shade and Stopnisek (2019) algorithm. For more details, see Bewick and Camper (2025).
 }
 \value{
-This function returns the numeric value of Faith's PD for the core microbiome.
+This function returns a list of the edges of the phylogenetic tree associated with the core microbiome.
 }
 
 \references{
@@ -76,6 +80,6 @@ enterotype_tree$node.label<-as.character(1:1:enterotype_tree$Nnode)
 #Create a phyloseq object with a tree
 example_phyloseq<-phyloseq(otu_table(enterotype),phy_tree(as.phylo(enterotype_tree)))
 
-coreFaithsPD(example_phyloseq)
+coreEdges(example_phyloseq)
 
 }

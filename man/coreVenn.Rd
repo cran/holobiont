@@ -1,20 +1,18 @@
-\name{corePhyloVenn}
-\alias{corePhyloVenn}
+\name{coreVenn}
+\alias{coreVenn}
 \title{
-Phylogenetic Venn Diagram Comparing Core Microbiomes from Multiple Habitats
+Venn Diagram Comparing (Non-Phylogenetic) Core Microbiomes from Multiple Habitats
 }
 \description{
-Generates a Venn diagram comparing and contrasting the shared and unique phylogenetic branch lengths of core microbiomes from two or more (up to seven) different types of habitats based on either the tip-based or the branch-based core community phylogeny.
+Generates a Venn diagram comparing and contrasting the shared and unique taxa of core microbiomes from two or more (up to seven) different types of habitats using a non-phylogenetic approach.
 }
 \usage{
-corePhyloVenn(x, grouping, core_fraction = 0.5, ab_threshold1 = 0,
-ab_threshold2 = 0, ab_threshold3 = 0, mode='branch',  selection='basic', max_tax = NULL,
-increase_cutoff = 2, initial_branches = NULL, rooted=TRUE,
-ordered_groups=NULL,show_percentage=TRUE,decimal=2,
-fill_color=c('red','orange','yellow','green','blue','purple','black'),
-fill_alpha=0.5, stroke_color='black',stroke_alpha = 1, stroke_size = 1,
-stroke_linetype = "solid", set_name_color = "black", set_name_size = 6,
-text_color = "black",text_size = 4)
+coreVenn(x, grouping, core_fraction = 0.5, ab_threshold1 = 0,
+ab_threshold2 = 0, ab_threshold3 = 0, selection='basic', max_tax = NULL,
+increase_cutoff = 2,ordered_groups=NULL,show_percentage=TRUE,decimal=2,
+fill_color=c('red','orange','yellow','green','blue','purple','black'),fill_alpha=0.5,
+stroke_color='black',stroke_alpha = 1, stroke_size = 1,stroke_linetype = "solid",
+set_name_color = "black", set_name_size = 6,text_color = "black",text_size = 4)
 }
 \arguments{
   \item{x}{
@@ -35,9 +33,7 @@ The threshold for maximum relative abundance in any sample. This variable is onl
 \item{ab_threshold3}{
 The threshold for minimum relative abundance across all samples. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.
 }
-\item{mode}{
-Whether to build a tip-based ('tip') or a branch-based ('branch') phylogeny. The default is 'branch'.
-}
+
 \item{selection}{
 Whether to use thresholds ('basic') or the Shade and Stopnisek method ('shade') to define the core community. The default is 'basic'.
 }
@@ -47,12 +43,7 @@ The maximum number of branches to add sequentially, as a percentage of the total
 \item{increase_cutoff}{
 The threshold for the percent increase in beta diversity used to identify the taxon at which point adding more taxa yields diminishing returns in explanatory power. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
 }
-\item{initial_branches}{
-The number of branches to include prior to testing for increases in beta diversity. The default is to use all branches that are present in every sample and to begin testing branches that are missing from at least one sample. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
-}
-\item{rooted}{
-Whether to include the root of the phylogeny. The default is TRUE, meaning that the root is necessarily included in all phylogenies. This requires that the input tree be rooted.
-}
+
 \item{ordered_groups}{
 When provided, specifies the order in which different habitats should be plotted. This order is matched to the color order specified in \code{fill_color} (see below).
 }
@@ -95,10 +86,10 @@ The size of the font used to report the value in each compartment of the Venn di
 
 }
 \details{
-\code{corePhyloVenn} generates a Venn diagram showing either the percentage of the phylogenetic branch length or the absolute phylogenetic branch length shared between the core community phylogenies from all possible combinations of up to seven different habitat types. For more details, see Bewick and Camper (2025).
+\code{coreVenn} generates a Venn diagram showing either the percentage of taxa or the taxon count shared between the core communities from all possible combinations of up to seven different habitat types. For more details, see Bewick and Camper (2025).
 }
 \value{
-This function returns a plot of the phylogenetic Venn diagram.
+This function returns a plot of the Venn diagram.
 }
 
 \references{
@@ -134,6 +125,6 @@ enterotypeMF<-prune_samples(sample_names(enterotype)[gendered],enterotype)
 #Create a phyloseq object with a tree
 example_phyloseq<-phyloseq(otu_table(enterotypeMF),phy_tree(as.phylo(enterotype_tree)))
 
-corePhyloVenn(example_phyloseq,grouping=sample_data(enterotypeMF)$Gender)
+coreVenn(example_phyloseq,grouping=sample_data(enterotypeMF)$Gender)
 
 }

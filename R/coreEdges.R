@@ -1,9 +1,20 @@
 #' @importFrom phytools bind.tip
-#' @importFrom phyloseq sample_names otu_table phy_tree prune_taxa taxa_names
-#' @importFrom ape which.edge mrca nodepath plot.phylo chronos
+#' @importFrom phyloseq sample_names otu_table phy_tree prune_taxa taxa_names phy_tree<-
+#' @importFrom ape which.edge mrca nodepath plot.phylo chronos root is.rooted
 #' @importFrom castor get_all_distances_to_root
 #' @export
-coreTree <- function(x, core_fraction = 0.5, ab_threshold1 = 0, ab_threshold2 = 0, ab_threshold3 = 0, mode = 'branch', selection = 'basic', max_tax=NULL, increase_cutoff = 2, initial_branches=NULL,NCcol = 'black',Ccol='red',rooted=TRUE,branch.width=4,label.tips=FALSE, scaled = FALSE, remove_zeros=TRUE,plot.chronogram=FALSE) {
+coreEdges <- function(x,
+                      core_fraction = 0.5,
+                      ab_threshold1 = 0,
+                      ab_threshold2 = 0,
+                      ab_threshold3 = 0,
+                      mode = 'branch',
+                      selection = 'basic',
+                      max_tax=NULL,
+                      increase_cutoff = 2,
+                      initial_branches = NULL,
+                      rooted=TRUE,
+                      remove_zeros=TRUE) {
 
   core<-core_fraction
 
@@ -40,7 +51,7 @@ coreTree <- function(x, core_fraction = 0.5, ab_threshold1 = 0, ab_threshold2 = 
     }else if (selection == 'shade'){
 
       #If no maximum taxon is specified, default to considering 1%
-      if (is.null(max_tax)){max_tax<-round(length(newtree$tip.label)*0.01)}
+      if (is.null(max_tax)){max_tax<-1}
       temp<-shade_branch(x,newtree,max_tax,increase_cutoff,initial_branches)
 
     }else{
@@ -62,7 +73,7 @@ coreTree <- function(x, core_fraction = 0.5, ab_threshold1 = 0, ab_threshold2 = 
     }else if (selection == 'shade'){
 
       #If no maximum taxon is specified, default to considering 1%
-      if (is.null(max_tax)){max_tax<-round(length(newtree$tip.label)*0.01)}
+      if (is.null(max_tax)){max_tax<-1}
       temp<-shade_tip(x,newtree,max_tax,increase_cutoff)
     }else{
 
@@ -78,25 +89,6 @@ coreTree <- function(x, core_fraction = 0.5, ab_threshold1 = 0, ab_threshold2 = 
   #if the mode doesn't match one of the options, print a warning
   else{warning('Warning, that mode is not supported')}
 
-  #make a state vector to designate which edges are core and which are not; label all edges with 1 (not-core) initially
-  states<-rep(1,length(phy_tree(x)$edge.length))
-  #label all of the core edges with 2
-  states[core_edges]<-2
+  return(list(core_edges=core_edges,edges=edges))
 
-  #color code the states 1 and 2
-  branch_col<-c(NCcol,Ccol)
-
-  #plot the tree (omitting the outgroup... since it was added at the root, it is the last edge and can be ignored)
-  if (plot.chronogram==FALSE){
-    #plot the tree
-    if (scaled == FALSE){
-      tt<-plot.phylo(phy_tree(x),edge.color=branch_col[states],edge.width = branch.width,show.tip.label=label.tips,cex=0.5)
-    }else{
-      temptree<-phy_tree(x)
-      temptree$edge.length <- sqrt(temptree$edge.length+1e-2)
-      tt<-plot.phylo(temptree,edge.color=branch_col[states],edge.width = branch.width,show.tip.label=label.tips,cex=0.5)
-    }
-  }else{
-    tt<-plot.phylo(chronos(phy_tree(x)),edge.color=branch_col[states],edge.width=branch.width,show.tip.label=label.tips,cex = 0.5 )
-  }
 }

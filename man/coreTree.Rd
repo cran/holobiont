@@ -7,9 +7,11 @@ The Core Community Phylogeny
 Identifies and plots the tip-based or the branch-based core community phylogeny based on the occurrence of abundance of different microbial lineages in a set of samples from a common habitat (e.g., type of host or environment).
 }
 \usage{
-coreTree(x, core_fraction,
-mode='branch', NCcol = 'black', Ccol='red',rooted=TRUE,
-branch.width=4,label.tips=FALSE, remove_zeros=TRUE,
+coreTree(x, core_fraction = 0.5, ab_threshold1 = 0,
+ab_threshold2 = 0,ab_threshold3 = 0, mode='branch',
+selection = 'basic',max_tax=NULL, increase_cutoff = 2,
+initial_branches = NULL, NCcol = 'black', Ccol='red',rooted=TRUE,
+branch.width=4,label.tips=FALSE, scaled = FALSE, remove_zeros=TRUE,
 plot.chronogram=FALSE)
 }
 \arguments{
@@ -17,25 +19,48 @@ plot.chronogram=FALSE)
   (Required) Microbial community data. This must be in the form of a phyloseq object and must contain, at a minimum, an OTU abundance table and a phylogeny.
 }
 \item{core_fraction}{
-(Required) The fraction of samples that a microbial taxon must be found in to be considered part of the core microbiome.
+The fraction of samples that a microbial taxon must be found in to be considered part of the 'core' microbiome. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.5.
+}
+\item{ab_threshold1}{
+The threshold for mean relative abundance across all samples. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.
+}
+\item{ab_threshold2}{
+The threshold for maximum relative abundance in any sample. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.
+}
+\item{ab_threshold3}{
+The threshold for minimum relative abundance across all samples. This variable is only used when selection = 'basic' and is ignored when selection = 'shade'. The default value is 0.
 }
 \item{mode}{
-Whether to build a tip-based (\code{tip}) or a branch-based (\code{branch}) phylogeny. The default is \code{branch}.
+Whether to build a tip-based ('tip') or a branch-based ('branch') phylogeny. The default is 'branch'.
 }
-\item{NCcol}{
+\item{selection}{
+Whether to use thresholds ('basic') or the Shade and Stopnisek method ('shade') to define the core community. The default is 'basic'.
+}
+\item{max_tax}{
+The maximum number of branches to add sequentially, as a percentage of the total branches when using the Shade and Stopnisek method. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
+}
+\item{increase_cutoff}{
+The threshold for the percent increase in beta diversity used to identify the taxon at which point adding more taxa yields diminishing returns in explanatory power. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
+}
+\item{initial_branches}{
+The number of branches to include prior to testing for increases in beta diversity. The default is to use all branches that are present in every sample and to begin testing branches that are missing from at least one sample. This variable is only used when selection = 'shade' and is ignored when selection = 'basic'.
+}
+\item{rooted}{
+Whether to include the root of the phylogeny. The default is TRUE, meaning that the root is necessarily included in all phylogenies. This requires that the input tree be rooted.
+}\item{NCcol}{
 The color to plot all branches of the phylogeny that are NOT part of the core community phylogeny. The default is black.
 }
 \item{Ccol}{
 The color to plot all branches of the phylogeny that are ARE part of the core community phylogeny. The default is red.
-}
-\item{rooted}{
-Whether to include the root of the phylogeny. The default is TRUE, meaning that the root is necessarily included in all phylogenies. This requires that the input tree be rooted.
 }
 \item{branch.width}{
 The width to use when plotting the branches of the phylogeny. The default is 4.
 }
 \item{label.tips}{
 Whether or not to label the tips of the phylogeny with the microbial taxon names. The default is FALSE.
+}
+\item{scaled}{
+Whether or not to scale the branch lengths. The default is FALSE.
 }
 \item{remove_zeros}{
 Whether or not to remove taxa that are missing from all samples prior to drawing the phylogeny. The default is TRUE.
